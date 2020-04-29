@@ -1,58 +1,44 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>Equipo 35 Dash.js</title>
+  
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
     <style>
         video {
            width: 640px;
            height: 360px;
         }
     </style>
-    <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+</head>
+<body>
+    <h1>Equipo 35</h1>
+
+    <div class="code">
+        <video class="dashjs-player" autoplay controls preload="auto" muted>
+        </video>
+    </div>
+    <div class="code">
+        <p>Video Bitrate: <span id="bitrate"></span> kbps</p>
+        <p>Video Buffer: <span id="buffer"></span> seconds</p>
+        <p>Video Representation: <span id="representation"></span></p>
+    </div>
+
+    <div id="chartContainer1" style="height: 170px; width:100%;"></div>
+    <div id="chartContainer2" style="height: 170px; width:100%;"></div>
+
+
+
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        init();
-    });
-    const protData = {
-        "org.w3.clearkey": {
-            "clearkeys": {
-                "oW5AK5BW43HzbTSKpiu3SQ": "hyN9IKGfWKdAwFaE5pm0qg"
-            }
-        }
-    };
-
-    var player;
-    var dps1 = []; // dataPoints 1
-    var dps2 = []; // dataPoints 2
-    var d = new Date();
-    var inicial = d.getTime();
-    function init(){
-        var video,
-        mpd_url = "outputsin/stream.mpd";
-        //mpd_url = "outputenc/stream.mpd";
-        //mpd_url = "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_30fps.mpd";
-        video = document.querySelector("video");
-        player = dashjs.MediaPlayer().create();
-        player.setProtectionData(protData);
-        player.initialize(video, mpd_url, true);
-        player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function() {
-            clearInterval(eventPoller);
+        document.addEventListener("DOMContentLoaded", function () {
+            init();
         });
-        var eventPoller = setInterval(function() {
-            var streamInfo = player.getActiveStream().getStreamInfo();
-            var dashMetrics = player.getDashMetrics();
-            var dashAdapter = player.getDashAdapter();
 
-            if (dashMetrics && streamInfo) {
-                const periodIdx = streamInfo.index;
-                var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
-                var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
-                var bitrate = repSwitch ? Math.round(dashAdapter.
-                    getBandwidthForRepresentation(repSwitch.to,
-                        periodIdx) / 1000) : NaN;
-                        document.getElementById('buffer').innerText = bufferLevel + " secs";
-                        document.getElementById('bitrate').innerText = bitrate + " Kbps";
-                        document.getElementById('representation').innerText = repSwitch.to;
-            }
-            var chart1 = new CanvasJS.Chart("chartContainer1", {
+        var dps1 = []; // dataPoints
+        var dps2 = []; // dataPoints
+        
+        var chart1 = new CanvasJS.Chart("chartContainer1", {
                 title :{
                     text: "Video Buffer"
                 },
@@ -66,7 +52,7 @@
                     dataPoints: dps1
                 }]
             });
-            var chart2 = new CanvasJS.Chart("chartContainer2", {
+        var chart2 = new CanvasJS.Chart("chartContainer2", {
                 title :{
                     text: "Bitrate"
                 },
@@ -74,75 +60,72 @@
                     includeZero: false,
                     title: "Bitrate (kbps)"
                 },
-                axisY: {
-                    includeZero: false,
-                    title: "Buffer (kbps)"
-                },
                 data: [{
                     type: "line",
                     title: "Tiempo (s)",
                     dataPoints: dps2
                 }]
             });
-            var xVal = 0;
-            var bufferLevel;
-            var bitrate;
 
-            d = new Date();
-            xVal = d.getTime() - inicial;
-            //console.log(inicial, d.getTime())
+        var xVal = 0;
+        var yVal = 0; 
 
-            const periodIdx = streamInfo.index;
+        var d = new Date();
+        var inicial = d.getTime();
 
-            bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
-            bitrate = repSwitch ? Math.round(dashAdapter.
-                getBandwidthForRepresentation(repSwitch.to,
-                    periodIdx) / 1000) : NaN;
-            dps1.push({
-                x: xVal,
-                y: bufferLevel
+        function init(){
+            var video,
+            player,
+            mpd_url = "./output_encrypted/stream.mpd";
+            video = document.querySelector("video");
+            player = dashjs.MediaPlayer().create();
+            player.initialize(video, mpd_url, true);
+            player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function() {
+                clearInterval(eventPoller);
             });
-            dps2.push({
-                x: xVal,
-                y: bitrate
-            });
-            chart1.render();
-            chart2.render();
-        }, 500);
-    }
-    function changeQuality() {
-        var quality = document.getElementById('quality').value;
-        player.updateSettings({ 'streaming': { 'abr': { 'autoSwitchBitrate': { 'video': false} } } });
-        player.setQualityFor('video', quality);
-    }
+            player.setProtectionData(protData);
+            var eventPoller = setInterval(function() {
+                var streamInfo = player.getActiveStream().getStreamInfo();
+                var dashMetrics = player.getDashMetrics();
+                var dashAdapter = player.getDashAdapter();
+                if (dashMetrics && streamInfo) {
+                   const periodIdx = streamInfo.index;
+                   var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
+                   var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
+                   var bitrate = repSwitch ? Math.round(dashAdapter.
+                       getBandwidthForRepresentation(repSwitch.to,
+                           periodIdx) / 1000) : NaN;
+                    //chart
+                    d = new Date();
+                    xVal = d.getTime() - inicial;
+                    dps1.push({
+                        x: xVal,
+                        y: bufferLevel
+                    });
 
+                    dps2.push({
+                        x: xVal,
+                        y: bitrate
+                    });
+
+                    chart1.render();
+                    chart2.render();
+
+                   document.getElementById('buffer').innerText = bufferLevel ;
+                   document.getElementById('bitrate').innerText = bitrate;
+                   document.getElementById('representation').innerText = repSwitch.to;
+               }
+           }, 500);
+        }
+
+        const protData = {
+            "org.w3.clearkey": {
+                "clearkeys": {
+                    "oW5AK5BW43HzbTSKpiu3SQ": "hyN9IKGfWKdAwFaE5pm0qg"
+               }
+           }
+       };
     </script>
 
-    <head>
-        <title>Practica 3 IRAC</title>
-    </head>
-    <body>
-        <h1>Equipo 35</h1>
-        <div class="code">
-            <video class="dashjs-player" autoplay muted controls preload="auto">
-            </video>
-        </div>
-        <div class="code">
-            <p>Video Bitrate: <span id="bitrate"></span></p>
-            <p>Video Buffer: <span id="buffer"></span></p>
-            <p>Video Representation: <span id="representation"></span></p>
-            <select id="quality">
-                <option value="2">High</option>
-                <option value="1">Med</option>
-                <option value="0">Low</option>
-            </select>
-            <button onclick="changeQuality()">change quality</button>
-            </form>
-        </div>
-        <div id="chartContainer1" style="height: 150px; width: 640px;"></div>
-        <div id="chartContainer2" style="height: 150px; width: 640px;"></div>
-
-    </body>
-    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
-
+</body>
 </html>
