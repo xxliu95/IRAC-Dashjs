@@ -11,6 +11,13 @@
     document.addEventListener("DOMContentLoaded", function () {
         init();
     });
+    const protData = {
+        "org.w3.clearkey": {
+            "clearkeys": {
+                "oW5AK5BW43HzbTSKpiu3SQ": "hyN9IKGfWKdAwFaE5pm0qg"
+            }
+        }
+    };
 
     var player;
     var dps1 = []; // dataPoints 1
@@ -20,9 +27,11 @@
     function init(){
         var video,
         mpd_url = "outputsin/stream.mpd";
+        //mpd_url = "outputenc/stream.mpd";
         //mpd_url = "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_30fps.mpd";
         video = document.querySelector("video");
         player = dashjs.MediaPlayer().create();
+        player.setProtectionData(protData);
         player.initialize(video, mpd_url, true);
         player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function() {
             clearInterval(eventPoller);
