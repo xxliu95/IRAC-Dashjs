@@ -1,31 +1,115 @@
 <!DOCTYPE html>
 <html>
-    <style>
-        video {
-           width: 640px;
-           height: 360px;
-        }
-    </style>
-
-    <head>
-        <meta charset="UTF-8">
-        <title>Práctica 3 IRAC</title>
-    </head>
-
-    <body>
-        <h1>Equipo 35</h1>
-        <video class="dashjs-player" autoplay controls preload="auto">
-            <source src="https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd" type="application/dash+xml"/>
-        </video>
-    </body>
-    <script>
-        var player;
-        document.addEventListener("DOMContentLoaded", function () {
-            init();
-        });
-        function init(){
-            player = dashjs.MediaPlayerFactory.create( document.querySelector(".dashjsplayer"));
-        };
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/3.1.0/dash.all.min.js" type="text/javascript"></script>
-</html>
+  	<style>
+	    video {
+	       width: 640px;
+	       height: 360px;
+	    }
+	</style>
+  	<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+  	<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+  	<script>
+		var player;
+		document.addEventListener("DOMContentLoaded", function () {init();});
+		const protData = {
+                "com.widevine.alpha": {
+                    "serverURL": "https://drm-widevine-licensing.axtest.net/AcquireLicense",
+                    "httpRequestHeaders": {
+                        "X-AxDRM-Message": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJjb21fa2V5X2lkIjoiYjMzNjRlYjUtNTFmNi00YWUzLThjOTgtMzNjZWQ1ZTMxYzc4IiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsImZpcnN0X3BsYXlfZXhwaXJhdGlvbiI6NjAsInBsYXlyZWFkeSI6eyJyZWFsX3RpbWVfZXhwaXJhdGlvbiI6dHJ1ZX0sImtleXMiOlt7ImlkIjoiOWViNDA1MGQtZTQ0Yi00ODAyLTkzMmUtMjdkNzUwODNlMjY2IiwiZW5jcnlwdGVkX2tleSI6ImxLM09qSExZVzI0Y3Iya3RSNzRmbnc9PSJ9XX19.FAbIiPxX8BHi9RwfzD7Yn-wugU19ghrkBFKsaCPrZmU"
+                    }
+                }
+            };
+		var updateInterval = 1000;
+		var dataLength = 20; // number of dataPoints visible at any point
+		var d = new Date();
+		var inicial = d.getTime();
+		var dps1 = []; // dataPoints
+		var dps2 = []; // dataPoints
+		var xVal = 0;
+		function init(){
+					var video,
+					player,
+					mpd_url =  "https://media.axprod.net/TestVectors/v7-MultiDRM-SingleKey/Manifest_1080p.mpd";
+					video = document.querySelector("video");
+					player = dashjs.MediaPlayer().create();
+					player.setProtectionData(protData);
+					player.initialize(video, mpd_url, true);
+					player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function() {clearInterval(eventPoller);});
+					var chart1 = new CanvasJS.Chart("chartContainer1", {
+		                title :{
+		                    text: "Video Buffer"
+		                },
+		                axisY: {
+		                    includeZero: false,
+		                    title: "Buffer level (s)"
+		                },
+		                data: [{
+		                    type: "line",
+		                    title: "Tiempo (s)",
+		                    dataPoints: dps1
+		                }]
+		            });
+					 var chart2 = new CanvasJS.Chart("chartContainer2", {
+		                title :{
+		                    text: "Bitrate"
+		                },
+		                axisY: {
+		                    includeZero: false,
+		                    title: "Bitrate (kbps)"
+		                },
+		                data: [{
+		                    type: "line",
+		                    title: "Tiempo (s)",
+		                    dataPoints: dps2
+		                }]
+		            });
+					var eventPoller = setInterval(function() {
+						var streamInfo = player.getActiveStream().getStreamInfo();
+						var dashMetrics = player.getDashMetrics();
+						var dashAdapter = player.getDashAdapter();
+						d = new Date();
+            			xVal = d.getTime() - inicial;
+           				console.log(inicial, d.getTime())      
+						if (dashMetrics && streamInfo) {
+							const periodIdx = streamInfo.index;
+							var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
+							var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
+							var bitrate = repSwitch ? Math.round(dashAdapter.getBandwidthForRepresentation(repSwitch.to,periodIdx)/1000):NaN;
+							document.getElementById('buffer').innerText = bufferLevel + " secs";
+							document.getElementById('bitrate').innerText = bitrate + " Kbps";
+							document.getElementById('representation').innerText = repSwitch.to;
+							dps1.push({
+				                x: xVal,
+				                y: bufferLevel
+            				});
+            				dps2.push({
+				                x: xVal,
+				                y: bitrate
+            				});
+				            chart1.render();
+				            chart2.render();
+						}
+					}, 500);
+		}
+	</script>
+	<head>
+	  <meta charset="utf-8">
+	  <title>Practica 3 IRAC</title>
+	</head>
+	<h1>Practica 3 IRAC</h1>
+	<h2>Equipo 35</h2>
+	<body>
+		<div class="code">
+			<video class="dashjs-player" autoplay preload="auto" muted controls>
+			</video>
+		</div>
+		<div class="code">
+			<p>Video Bitrate: <span id="bitrate"></span></p>
+			<p>Video Buffer: <span id="buffer"></span></p>
+			<p>Video Representation: <span id="representation"></span></p>
+		</div>
+		<div id="chartContainer1" style="height: 150px; width: 640px;"></div>
+		<div id="chartContainer2" style="height: 150px; width: 640px;"></div>
+	</body>
+</html> 
+  
